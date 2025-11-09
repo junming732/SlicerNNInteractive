@@ -73,7 +73,7 @@ ENV/
 # mypy
 .mypy_cache/
 
-# temp 
+# temp
 temp/
 
 # log files
@@ -87,3 +87,5 @@ temp/
 
 log.out
 .nninteractive_weights
+
+checkpoints/

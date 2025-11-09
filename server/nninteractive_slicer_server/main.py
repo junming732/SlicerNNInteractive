@@ -19,6 +19,7 @@ from huggingface_hub import (
 )
 
 from nnInteractive.inference.inference_session import nnInteractiveInferenceSession
+from fastsam3d_model import FastSAM3DPredictor
 
 
 from fastapi import FastAPI, Response, UploadFile, File, Form
@@ -108,7 +109,7 @@ def get_error_if_img_not_set():
     if PROMPT_MANAGER.img is None:
         warnings.warn("There is no image in the server. Be sure to send it before")
         return {"status": "error", "message": "No image uploaded"}
-    
+
     return
 
 
@@ -247,7 +248,8 @@ class PromptManager:
 # Global prompt manager instance
 ###############################################################################
 PROMPT_MANAGER = PromptManager()
-
+FASTSAM3D_PREDICTOR = FastSAM3DPredictor()
+FASTSAM3D_PREDICTOR.load_model("../checkpoints_data/fastsam3d.pth")
 
 ###############################################################################
 # FastAPI endpoints
@@ -268,6 +270,9 @@ async def upload_image(
     arr = np.load(io.BytesIO(file_bytes))
     PROMPT_MANAGER.set_image(arr)
 
+    # Set for FastSAM3D
+    FASTSAM3D_PREDICTOR.set_image(arr)
+
     return {"status": "ok"}
 
 
@@ -281,7 +286,7 @@ async def upload_segment(
     error = get_error_if_img_not_set()
     if error is not None:
         return error
-    
+
     file_bytes = await file.read()
     decompressed = gzip.decompress(file_bytes)
     arr = np.load(io.BytesIO(decompressed))
@@ -306,7 +311,7 @@ async def add_point_interaction(params: PointParams):
     error = get_error_if_img_not_set()
     if error is not None:
         return error
-    
+
     t = time.time()
 
     seg_result = PROMPT_MANAGER.add_point_interaction(
@@ -339,7 +344,7 @@ async def add_bbox_interaction(params: BBoxParams):
     error = get_error_if_img_not_set()
     if error is not None:
         return error
-    
+
     t = time.time()
 
     seg_result = PROMPT_MANAGER.add_bbox_interaction(
@@ -373,7 +378,7 @@ async def add_lasso_interaction(
     error = get_error_if_img_not_set()
     if error is not None:
         return error
-    
+
     file_bytes = await file.read()
     mask, positive_click_bool = process_mask_and_click_input(file_bytes, positive_click)
 
@@ -405,7 +410,7 @@ async def add_scribble_interaction(
     error = get_error_if_img_not_set()
     if error is not None:
         return error
-    
+
     # Read the uploaded file bytes and decompress.
     file_bytes = await file.read()
 
@@ -420,6 +425,31 @@ async def add_scribble_interaction(
 
     return Response(
         content=segmentation_binary_data,
+        media_type="application/octet-stream",
+        headers={"Content-Encoding": "gzip"},
+    )
+
+@app.post("/add_fastsam3d_interaction")
+async def add_fastsam3d_interaction(params: PointParams):
+    """
+    FastSAM3D segmentation using point prompts
+    """
+    error = get_error_if_img_not_set()
+    if error is not None:
+        return error
+
+    # Convert to numpy array
+    point_coords = np.array([params.voxel_coord], dtype=np.float32)
+    point_labels = np.array([1 if params.positive_click else 0], dtype=np.int32)
+
+    # Get mask from FastSAM3D
+    mask = FASTSAM3D_PREDICTOR.predict(point_coords, point_labels)
+
+    # Convert to binary format (same as nnInteractive)
+    compressed_bin = segmentation_binary(mask, compress=True)
+
+    return Response(
+        content=compressed_bin,
         media_type="application/octet-stream",
         headers={"Content-Encoding": "gzip"},
     )
