@@ -89,3 +89,4 @@ log.out
 .nninteractive_weights
 
 checkpoints/
+dev_tmp
