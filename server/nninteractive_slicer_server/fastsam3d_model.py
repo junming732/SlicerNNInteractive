@@ -19,7 +19,7 @@ from scipy.ndimage import zoom
 # FastSAM3D imports
 try:
     from segment_anything.build_sam3D import sam_model_registry3D
-    from segment_anything.predictor3D import SamPredictor3D
+    from segment_anything.predictor import SamPredictor
     FASTSAM3D_AVAILABLE = True
 except ImportError:
     print("Warning: FastSAM3D not installed. Install from https://github.com/arcadelab/FastSAM3D")
@@ -53,7 +53,7 @@ class FastSAM3DPredictor:
             self.model = sam_model_registry3D["vit_b_original"](checkpoint=checkpoint_path)
             self.model.to(self.device)
             self.model.eval()
-            self.predictor = SamPredictor3D(self.model)
+            self.predictor = SamPredictor(self.model)
             self.model_loaded = True
             print("FastSAM3D loaded successfully")
         except Exception as e:
