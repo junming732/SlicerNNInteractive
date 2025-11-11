@@ -19,7 +19,7 @@ from huggingface_hub import (
 )
 
 from nnInteractive.inference.inference_session import nnInteractiveInferenceSession
-from fastsam3d_model import FastSAM3DPredictor
+from sammed3d_model import FastSAM3DPredictor
 
 
 from fastapi import FastAPI, Response, UploadFile, File, Form
@@ -249,7 +249,7 @@ class PromptManager:
 ###############################################################################
 PROMPT_MANAGER = PromptManager()
 FASTSAM3D_PREDICTOR = FastSAM3DPredictor()
-FASTSAM3D_PREDICTOR.load_model("../checkpoints_data/fastsam3d.pth")
+FASTSAM3D_PREDICTOR.load_model("../checkpoints_data/sam_med3d_turbo.pth")
 
 ###############################################################################
 # FastAPI endpoints
